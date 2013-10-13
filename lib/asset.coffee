@@ -159,7 +159,10 @@ class exports.Asset extends EventEmitter
         
     # Check if a given url "matches" this asset
     checkUrl: (url) ->
-        url is @specificUrl or (not @hash? and url is @url)
+        urlToCheck = @specificUrl
+        if @hostname?
+            urlToCheck = urlToCheck.replace "//#{@hostname}", ""
+        url is urlToCheck or (not @hash? and url is @url)
 
     # Used so that an asset can be express middleware
     handle: (request, response, next) ->

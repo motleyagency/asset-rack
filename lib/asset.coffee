@@ -25,6 +25,9 @@ class exports.Asset extends EventEmitter
         super()
         options ?= {}
     
+        # Set hostname
+        @hostname = options.hostname if options.hostname?
+
         # Set the url
         @url = options.url if options.url?
 

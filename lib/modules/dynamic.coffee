@@ -33,6 +33,7 @@ class exports.DynamicAssets extends Asset
               url.push file.name
 
             opts =
+                hostname: options.hostname
                 url: @urlPrefix + url.join '/'
                 filename: file.path
             opts[k] = v for own k, v of @options

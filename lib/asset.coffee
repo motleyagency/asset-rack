@@ -91,8 +91,15 @@ class exports.Asset extends EventEmitter
             # If it's a muti asset then make sure they are all completed
             if @assets?
                 async.forEach @assets, (asset, done) ->
-                    asset.on 'error', done
-                    asset.on 'complete', done
+
+                    # HACK Part of the asset recompile hack in development mode
+                    asset.on 'error', () ->
+                        done() unless @called
+                        @called = true
+                    asset.on 'complete', () ->
+                        done() unless @called
+                        @called = true
+                        
                 , (error) =>
                     return @emit 'error', error if error?
                     @completed = true
@@ -156,6 +163,14 @@ class exports.Asset extends EventEmitter
         if @gzip
             response.send @gzipContents
         else response.send @contents
+
+        # HACK: Clear assets after request in development mode
+        if process.env.NODE_ENV isnt 'production'
+            @completed = false
+            @assets = false
+            process.nextTick =>
+                @create @options
+
         
     # Check if a given url "matches" this asset
     checkUrl: (url) ->

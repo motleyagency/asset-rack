@@ -92,14 +92,14 @@ class exports.Asset extends EventEmitter
             # If it's a muti asset then make sure they are all completed
             if @assets?
                 async.forEach @assets, (asset, done) ->
-
-                    # HACK Part of the asset recompile hack in development mode
-                    asset.on 'error', () ->
-                        done() unless @called
-                        @called = true
-                    asset.on 'complete', () ->
-                        done() unless @called
-                        @called = true
+                    errorListener = () ->
+                        asset.removeListener 'error', errorListener
+                        done()
+                    completeListener = () ->
+                        asset.removeListener 'complete', completeListener
+                        done()
+                    asset.on 'error', errorListener
+                    asset.on 'complete', completeListener
 
                 , (error) =>
                     return @emit 'error', error if error?
@@ -152,25 +152,32 @@ class exports.Asset extends EventEmitter
 
     # Responds to an express route
     respond: (request, response) ->
-        headers = {}
-        if request.path is @url and @allowNoHashCache isnt true
-            for key, value of @headers
-                headers[key] = value
-            delete headers['cache-control']
-        else
-            headers = @headers
-        for key, value of headers
-            response.header key, value
-        if @gzip
-            response.send @gzipContents
-        else response.send @contents
+        respondNow = (request, response) =>
+            headers = {}
+            if request.path is @url and @allowNoHashCache isnt true
+                for key, value of @headers
+                    headers[key] = value
+                delete headers['cache-control']
+            else
+                headers = @headers
+            for key, value of headers
+                response.header key, value
+            if @gzip
+                response.send @gzipContents
+            else response.send @contents
 
         # HACK: Clear assets after request in development mode
-        if process.env.NODE_ENV isnt 'production'
+        if process.env.NODE_ENV is 'production'
+            respondNow request, response
+        else
             @completed = false
             @assets = false
-            process.nextTick =>
-                @create @options
+            completeCallback = () =>
+                @removeListener 'complete', completeCallback
+                respondNow request, response
+            @on 'complete', completeCallback
+            @create @options
+
 
         
     # Check if a given url "matches" this asset

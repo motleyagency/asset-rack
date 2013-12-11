@@ -24,6 +24,7 @@ class exports.Asset extends EventEmitter
     constructor: (options) ->
         super()
         options ?= {}
+        @options = options
     
         # Set hostname
         @hostname = options.hostname if options.hostname?
@@ -99,7 +100,7 @@ class exports.Asset extends EventEmitter
                     asset.on 'complete', () ->
                         done() unless @called
                         @called = true
-                        
+
                 , (error) =>
                     return @emit 'error', error if error?
                     @completed = true
